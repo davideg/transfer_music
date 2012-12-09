@@ -28,8 +28,12 @@ def transfer_music(src, dest):
 def _do_transfer(to_transfer, src, dest):
     for dr in to_transfer:
         dest_dir = os.path.join(dest, os.path.relpath(dr, src))
-        host, path = dest_dir.split(':')
-        dest_dir = ':'.join([host, shellquote(shellquote(path))])
+        pieces = dest_dir.split(':')
+        if len(pieces) == 2:
+            host, path = pieces
+            dest_dir = ':'.join([host, shellquote(shellquote(path))])
+        else:
+            dest_dir = shellquote(dest_dir)
         _create_remote_dir(dest_dir)
         rsync_cmd = RSYNC_CMD.format(src=shellquote(dr), dest=dest_dir)
         print 'Performing transfer using: {0}'.format(rsync_cmd)
