@@ -6,20 +6,30 @@ import re
 
 MUSIC_FILES_RE = r'.*\.(?:mp3|ogg|oga|aac|m4a|flac|wav|wma|aif|aiff|ape|mpc|shn)'
 MIN_FILE_COUNT = 4
-RSYNC_CMD = 'rsync -rvz --progress {src}/* {dest}'
+EXCLUDE_ALBUMS = ['Unknown Album']
+EXCLUDE_ARTISTS = ['Unknown Artist']
+EXCLUDE_FILE = {r'\Track?[0-9]?': r'^Track *\d+'}
+RSYNC_CMD = 'rsync -rvz --progress' + \
+            ''.join((' --exclude={0}'.format(key) for key in EXCLUDE_FILE.keys())) + \
+            ' {src}/* {dest}'
 
 def shellquote(s):
     return '"' + s.replace('"', '\\"') + '"'
 
 def transfer_music(src, dest):
     to_transfer = []
-    dirs = [path for path in (os.path.join(src, d) for d in os.listdir(src)) if os.path.isdir(path)]
+    dirs = [path for path in (os.path.join(src, d) for d in os.listdir(src)
+                                                   if not any((bool(re.search(rule, d)) for rule in EXCLUDE_ARTISTS)))
+                 if os.path.isdir(path)]
     for dr in dirs:
-        albums = [path for path in (os.path.join(dr, d) for d in os.listdir(dr))
+        albums = [path for path in (os.path.join(dr, d) for d in os.listdir(dr)
+                                                        if not any((bool(re.search(rule, d)) for rule in EXCLUDE_ALBUMS)))
                        if os.path.isdir(path)]
         for album in albums:
-            file_count = len([path for path in (os.path.join(album, e) for e in os.listdir(album)
-                                                                       if re.match(MUSIC_FILES_RE, e))
+            file_count = len([path for path in (os.path.join(album, e)
+                                                for e in os.listdir(album)
+                                                if re.match(MUSIC_FILES_RE, e) and
+                                                not any((bool(re.search(rule, e)) for rule in EXCLUDE_FILE.values())))
                                    if os.path.isfile(path)])
             if file_count >= MIN_FILE_COUNT:
                 to_transfer.append(os.path.join(dr, album))
