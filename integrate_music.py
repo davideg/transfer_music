@@ -21,13 +21,17 @@ def _build_index(music_dir):
         artists = (d for d in os.listdir(music_dir)
                      if os.path.isdir(os.path.join(music_dir, d)))
         for artist in artists:
-            music_index[artist] = {}
+            normalized_artist = _normalize_name(artist)
+            music_index[normalized_artist] = {}
             albums = (d for d in os.listdir(os.path.join(music_dir, artist))
                         if os.path.isdir(os.path.join(music_dir, artist, d)))
             for album in albums:
-                songs = [s for s in os.listdir(os.path.join(music_dir, artist, album))
-                           if os.path.isfile(os.path.join(music_dir, artist, album, s))]
-                music_index[artist][album] = songs
+                songs = [_normalize_name(s, remove_extension=True)
+                         for s in os.listdir(os.path.join(music_dir, artist,
+                                                          album))
+                         if os.path.isfile(os.path.join(music_dir, artist,
+                                                        album, s))]
+                music_index[artist][_normalize_name(album)] = songs
     return music_index
 
 def _load_index(music_dir):
@@ -47,6 +51,16 @@ def _save_index(music_dir, music_index):
 
 def integrate_music(music_index, dest_dir, source_dirs, dry_run=False):
     pass
+
+def _normalize_name(possible_path, remove_extension=False):
+    name = os.path.basename(possible_path).strip().lower()
+    name = re.sub('^\d\d?-', '', name, count=1)
+    name = re.sub('^\d* *-? +', '', name, count=1)
+    name = re.sub(r'^\b(?:' + '|'.join(IGNORE_ARTICLES) + r')\b', '', name, count=1)
+    name = name.replace('_', ' ')
+    if remove_extension:
+        name = os.path.splitext(name)[0]
+    return name.strip()
 
 def _setup_logging(verbose=False):
     logging_level = DEFAULT_LOGGING_LEVEL
